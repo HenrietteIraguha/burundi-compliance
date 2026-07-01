@@ -1,0 +1,120 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "autoincrement",
+ "creation": "2026-07-01 14:19:38.976960",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sales_invoice",
+  "defer_submission_to_obr",
+  "ebms_invoice_cancelled",
+  "invoice_registered_date",
+  "einvoice_signatures",
+  "column_break_qocj",
+  "payment_type",
+  "submitted_to_obr",
+  "invoice_registered_no",
+  "invoice_identifier",
+  "reason_for_creditcancel"
+ ],
+ "fields": [
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Sales Invoice",
+   "options": "Sales Invoice",
+   "reqd": 1
+  },
+  {
+   "fieldname": "payment_type",
+   "fieldtype": "Select",
+   "label": "Payment Type",
+   "options": "Cash\nBank\nCredit\nOthers",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "defer_submission_to_obr",
+   "fieldtype": "Check",
+   "label": "Defer submission to OBR"
+  },
+  {
+   "default": "0",
+   "fieldname": "submitted_to_obr",
+   "fieldtype": "Check",
+   "label": "eBMS Submission"
+  },
+  {
+   "default": "0",
+   "fieldname": "ebms_invoice_cancelled",
+   "fieldtype": "Check",
+   "label": "eBMS Invoice Cancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_registered_no",
+   "fieldtype": "Data",
+   "label": "Invoice Registered No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_registered_date",
+   "fieldtype": "Date",
+   "label": "Invoice Registered Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_identifier",
+   "fieldtype": "Data",
+   "label": "Invoice Identifier",
+   "read_only": 1
+  },
+  {
+   "fieldname": "einvoice_signatures",
+   "fieldtype": "Small Text",
+   "label": "eBMS Signature",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_qocj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reason_for_creditcancel",
+   "fieldtype": "Text Editor",
+   "label": "Reason for Credit/Cancel"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-01 14:57:35.859975",
+ "modified_by": "Administrator",
+ "module": "Burundi Compliance",
+ "name": "OBR Invoice Submission",
+ "naming_rule": "Autoincrement",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
