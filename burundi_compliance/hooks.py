@@ -37,7 +37,7 @@ app_include_js = ["burundi_compliance/public/js/taxes_and_totals.js"]
 # include js in doctype views
 
 doctype_js = {
-    "Sales Invoice": "burundi_compliance/client_scripts/e_invoicing.js",
+    
     "POS Invoice": "burundi_compliance/client_scripts/e_invoicing.js",
     "Company": "burundi_compliance/client_scripts/check_tin.js",
     "Customer": "burundi_compliance/client_scripts/check_tin.js",
@@ -46,7 +46,7 @@ doctype_js = {
 
 
 doctype_list_js = {
-    "Sales Invoice": "burundi_compliance/client_scripts/sales_invoice_list.js",
+
     "POS Invoice": "burundi_compliance/client_scripts/pos_invoice_list.js",
     "Stock Ledger Entry": "burundi_compliance/client_scripts/stock_list.js",
     "Stock Entry": "burundi_compliance/client_scripts/stock_list.js",
@@ -150,12 +150,7 @@ extend_doctype_class = {
 # Hook on document methods and events
 
 doc_events = {
-    "Sales Invoice": {
-        "on_submit": "burundi_compliance.burundi_compliance.overrides.sales_invoice.on_submit_invoice",
-        "before_save": "burundi_compliance.burundi_compliance.overrides.sales_invoice.before_save",
-        "before_cancel": "burundi_compliance.burundi_compliance.overrides.sales_invoice.on_cancel",
-        # "before_save": "burundi_compliance.burundi_compliance.overrides.sales_invoice.after_save",
-    },
+    
     "POS Invoice": {
         "on_submit": "burundi_compliance.burundi_compliance.overrides.sales_invoice.on_submit_invoice",  # NOTE: UPDATE THIS PART
         "before_cancel": "burundi_compliance.burundi_compliance.overrides.sales_invoice.on_cancel",
@@ -179,19 +174,7 @@ doc_events = {
 # from burundi_compliance.burundi_compliance.utils.event_frequency_schedular import get_event_frequency
 # invoice_frequency, stock_movement_frequency = get_event_frequency()
 
-scheduler_events = {
-    "cron": {
-        "*/5 * * * *": [
-            "burundi_compliance.burundi_compliance.background_tasks.stock_movement.send_stock_movement_to_obr"
-        ],
-    },
-    "hourly": [
-        "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_sales_invoices",
-        "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_pos_invoices",
-        "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_cancelled_sales_invoices",
-        "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_cancelled_pos_invoices",
-    ],
-}
+
 
 # import frappe
 # frappe.throw(f"{invoice_frequency} {stock_movement_frequency}")
