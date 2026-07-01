@@ -159,15 +159,3 @@ def on_cancel(doc: Document, method: str | None = None) -> None:
             doctype=doc.doctype,
             document_name=doc.name,
         )
-
-
-def before_save(doc: Document, method: str | None = None) -> None:
-    if doc.is_return:
-        data_to_update = {
-            "custom_einvoice_signatures": "",
-            "custom_invoice_registered_no": "",
-            "custom_invoice_registered_date": "",
-            "custom_submitted_to_obr": 0,
-        }
-
-        frappe.db.set_value(doc.doctype, doc.name, data_to_update)
