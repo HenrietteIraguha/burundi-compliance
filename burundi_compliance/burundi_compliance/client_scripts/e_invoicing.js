@@ -1,22 +1,3 @@
-frappe.ui.form.on('Sales Invoice', {
-  onload: function (frm) {
-    if (frm.is_new()) {
-      frm.set_value('custom_submitted_to_obr', 0)
-      frm.set_value('custom_einvoice_signatures', '')
-      frm.set_value('custom_invoice_registered_no', '')
-      frm.set_value('custom_invoice_registered_date', '')
-      frm.set_value('custom_invoice_identifier', '')
-    }
-  },
-  refresh: function (frm) {
-    if (
-      frm.doc.docstatus == 1 ||
-      (frm.doc.docstatus == 2 && frm.doc.custom_submitted_to_obr)
-    ) {
-      addInvoiceButtons(frm, 'Sales Invoice')
-    }
-  },
-})
 
 frappe.ui.form.on('POS Invoice', {
   onload: function (frm) {
