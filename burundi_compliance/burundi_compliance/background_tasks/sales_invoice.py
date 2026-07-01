@@ -15,17 +15,6 @@ from ..handlers.sales_invoice import (
 )
 
 
-def send_pending_sales_invoices() -> None:
-	all_submitted_unsent: list[Document] = frappe.get_all(
-		"Sales Invoice",
-		{"docstatus": 1, "custom_submitted_to_obr": 0, "is_opening": "No"},
-		["name", "company"],
-	)
-
-	if all_submitted_unsent:
-		send_pending_invoices(all_submitted_unsent, "Sales Invoice")
-
-
 def send_pending_pos_invoices() -> None:
 	all_pending_pos_invoices: list[Document] = frappe.get_all(
 		"POS Invoice",
@@ -35,17 +24,6 @@ def send_pending_pos_invoices() -> None:
 
 	if all_pending_pos_invoices:
 		send_pending_invoices(all_pending_pos_invoices, "POS Invoice")
-
-
-def send_pending_cancelled_sales_invoices() -> None:
-	all_cancelled_sales_invoices: list[Document] = frappe.get_all(
-		"Sales Invoice",
-		{"docstatus": 2, "custom_submitted_to_obr": 1, "is_opening": "No"},
-		["name"],
-	)
-
-	if all_cancelled_sales_invoices:
-		send_pending_cancelled_invoices(all_cancelled_sales_invoices, "Sales Invoice")
 
 
 def send_pending_cancelled_pos_invoices() -> None:
