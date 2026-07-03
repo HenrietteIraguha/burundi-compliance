@@ -1,10 +1,10 @@
 import frappe
 
-
 def handle_sales_invoice_submission(
     response: dict, document_name: str, doctype: str
 ) -> None:
     try:
+        
         invoice_number = response.get("result", {}).get("invoice_number")
         invoice_registered_number = response.get("result", {}).get(
             "invoice_registered_number"
@@ -14,24 +14,37 @@ def handle_sales_invoice_submission(
         )
         electronic_signature = response.get("electronic_signature")
 
-        data_to_update = {
-            "custom_invoice_registered_number": invoice_registered_number,
-            "custom_invoice_registered_date": invoice_registered_date,
-            "custom_electronic_signature": electronic_signature,
-            "custom_invoice_number": invoice_number,
-            "custom_submission_status": "Submitted",
-        }
+        if doctype == "Sales Invoice":
+            # Update OBR Invoice Submission doctype instead of Sales Invoice
+            existing = frappe.db.exists(
+                "OBR Invoice Submission", {"sales_invoice": document_name}
+            )
+            if existing:
+                frappe.db.set_value("OBR Invoice Submission", existing, {
+                    "submitted_to_obr": 1,
+                    "einvoice_signatures": electronic_signature,
+                    "invoice_registered_no": invoice_registered_number,
+                    "invoice_registered_date": invoice_registered_date,
+                })
+            else:
+                obr_doc = frappe.new_doc("OBR Invoice Submission")
+                obr_doc.sales_invoice = document_name
+                obr_doc.submitted_to_obr = 1
+                obr_doc.einvoice_signatures = electronic_signature
+                obr_doc.invoice_registered_no = invoice_registered_number
+                obr_doc.invoice_registered_date = invoice_registered_date
+                obr_doc.insert(ignore_permissions=True)
+        else:
+            # POS Invoice — update fields directly as before
+            data_to_update = {
+                "custom_einvoice_signatures": electronic_signature,
+                "custom_invoice_registered_no": invoice_registered_number,
+                "custom_invoice_registered_date": invoice_registered_date,
+                "custom_submitted_to_obr": 1,
+            }
+            frappe.db.set_value(doctype, document_name, data_to_update)
 
-        data_to_update = {
-            "custom_einvoice_signatures": electronic_signature,
-            "custom_invoice_registered_no": invoice_registered_number,
-            "custom_invoice_registered_date": invoice_registered_date,
-            "custom_submitted_to_obr": 1,
-        }
-
-        frappe.db.set_value(doctype, document_name, data_to_update)
         frappe.db.commit()
-
     except Exception as e:
         frappe.log_error(f"Error updating {doctype} {document_name}: {str(e)}")
 
@@ -40,12 +53,22 @@ def handle_sales_invoice_cancellation(
     response: dict, document_name: str, doctype: str
 ) -> None:
     try:
-        data_to_update = {
-            "custom_ebms_invoice_cancelled": 1,
-        }
+        if doctype == "Sales Invoice":
+            # Update OBR Invoice Submission doctype instead of Sales Invoice
+            existing = frappe.db.exists(
+                "OBR Invoice Submission", {"sales_invoice": document_name}
+            )
+            if existing:
+                frappe.db.set_value("OBR Invoice Submission", existing, {
+                    "ebms_invoice_cancelled": 1,
+                })
+        else:
+            # POS Invoice — update fields directly as before
+            data_to_update = {
+                "custom_ebms_invoice_cancelled": 1,
+            }
+            frappe.db.set_value(doctype, document_name, data_to_update)
 
-        frappe.db.set_value(doctype, document_name, data_to_update)
         frappe.db.commit()
-
     except Exception as e:
         frappe.log_error(f"Error updating {doctype} {document_name}: {str(e)}")
