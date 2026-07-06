@@ -7,6 +7,21 @@ from ..utils.invoice_signature import create_invoice_signature
 from .format_date_and_time import date_time_format
 
 
+def get_or_create_obr_submission(doc: Document) -> Document:
+    """Get or create OBR Invoice Submission record for a Sales Invoice"""
+    existing = frappe.db.exists(
+        "OBR Invoice Submission", {"sales_invoice": doc.name}
+    )
+    if existing:
+        return frappe.get_doc("OBR Invoice Submission", existing)
+    else:
+        obr_doc = frappe.new_doc("OBR Invoice Submission")
+        obr_doc.sales_invoice = doc.name
+        obr_doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+        return obr_doc
+
+
 def build_invoice_payload(doc: Document, settings_doc: Document) -> dict:
     company = frappe.get_doc("Company", doc.company)
     company_address = get_company_address_details(doc)
@@ -18,13 +33,27 @@ def build_invoice_payload(doc: Document, settings_doc: Document) -> dict:
         doc, settings_doc.system_identification_given_by_obr
     )
 
-    frappe.db.set_value(
-        doc.doctype,
-        doc.name,
-        "custom_invoice_identifier",
-        invoice_signature,
-        update_modified=False,
-    )
+    if doc.doctype == "Sales Invoice":
+        # Store invoice identifier in OBR Invoice Submission
+        obr_submission = get_or_create_obr_submission(doc)
+        frappe.db.set_value(
+            "OBR Invoice Submission",
+            obr_submission.name,
+            "invoice_identifier",
+            invoice_signature,
+            update_modified=False,
+        )
+        payment_type = get_payment_method(obr_submission.payment_type)
+    else:
+        # POS Invoice — store on doc directly as before
+        frappe.db.set_value(
+            doc.doctype,
+            doc.name,
+            "custom_invoice_identifier",
+            invoice_signature,
+            update_modified=False,
+        )
+        payment_type = get_payment_method(doc.custom_payment_types)
 
     confirm_tin_verified(doc.customer)
     if doc.doctype == "POS Invoice":
@@ -67,7 +96,7 @@ def build_invoice_payload(doc: Document, settings_doc: Document) -> dict:
         "tp_fiscal_center": settings_doc.the_taxpayers_tax_center,
         "tp_activity_sector": settings_doc.taxpayers_sector_of_activity,
         "tp_legal_form": settings_doc.taxpayers_legal_form,
-        "payment_type": get_payment_method(doc.custom_payment_types),
+        "payment_type": payment_type,
         "invoice_currency": doc.currency,
         "customer_name": doc.customer_name,
         "customer_TIN": doc.tax_id if doc.tax_id else "",
@@ -80,15 +109,28 @@ def build_invoice_payload(doc: Document, settings_doc: Document) -> dict:
     }
 
     if doc.is_return:
-        if not doc.custom_reason_for_creditcancel:
-            frappe.throw(
-                _(
-                    "Please provide a reason for credit note in the 'Reason for Credit/Cancellation' field."
+        if doc.doctype == "Sales Invoice":
+            # Get reason from OBR Invoice Submission
+            obr_submission = get_or_create_obr_submission(doc)
+            if not obr_submission.reason_for_creditcancel:
+                frappe.throw(
+                    _(
+                        "Please provide a reason for credit note in the OBR Invoice Submission record."
+                    )
                 )
-            )
+            soup = BeautifulSoup(obr_submission.reason_for_creditcancel, "html.parser")
+            ct_motif = soup.get_text()
+        else:
+            # POS Invoice — use custom field as before
+            if not doc.custom_reason_for_creditcancel:
+                frappe.throw(
+                    _(
+                        "Please provide a reason for credit note in the 'Reason for Credit/Cancellation' field."
+                    )
+                )
+            soup = BeautifulSoup(doc.custom_reason_for_creditcancel, "html.parser")
+            ct_motif = soup.get_text()
 
-        soup = BeautifulSoup(doc.custom_reason_for_creditcancel, "html.parser")
-        ct_motif = soup.get_text()
         invoice_data.update(
             {
                 "invoice_ref": doc.return_against,
@@ -97,7 +139,7 @@ def build_invoice_payload(doc: Document, settings_doc: Document) -> dict:
             }
         )
 
-        if doc.creating_payment_entry:
+        if doc.doctype != "Sales Invoice" and doc.creating_payment_entry:
             invoice_data["invoice_type"] = "RC"
 
     return invoice_data
