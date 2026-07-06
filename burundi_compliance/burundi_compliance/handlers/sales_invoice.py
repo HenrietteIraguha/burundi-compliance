@@ -4,7 +4,6 @@ def handle_sales_invoice_submission(
     response: dict, document_name: str, doctype: str
 ) -> None:
     try:
-        
         invoice_number = response.get("result", {}).get("invoice_number")
         invoice_registered_number = response.get("result", {}).get(
             "invoice_registered_number"
