@@ -18,18 +18,37 @@ from ..utils.utils import get_urls, in_configured_timeslot
 obr_api = OBRAPI()
 
 
+def get_obr_submission(invoice_name: str):
+    """Get OBR Invoice Submission record for a Sales Invoice"""
+    existing = frappe.db.exists(
+        "OBR Invoice Submission", {"sales_invoice": invoice_name}
+    )
+    if existing:
+        return frappe.get_doc("OBR Invoice Submission", existing)
+    return None
+
+
 def on_submit_invoice(doc: Document, method: str | None = None) -> None:
     if doc.is_opening == "Yes":
-        return
-
-    if doc.custom_defer_submission_to_obr:
         return
 
     if doc.doctype == "Sales Invoice" and doc.is_consolidated:
         return
 
-    if doc.custom_submitted_to_obr:
-        return
+    if doc.doctype == "Sales Invoice":
+        # Check OBR Invoice Submission for Sales Invoice
+        obr_submission = get_obr_submission(doc.name)
+        if obr_submission:
+            if obr_submission.defer_submission_to_obr:
+                return
+            if obr_submission.submitted_to_obr:
+                return
+    else:
+        # POS Invoice — use custom fields as before
+        if doc.custom_defer_submission_to_obr:
+            return
+        if doc.custom_submitted_to_obr:
+            return
 
     generic_invoice_on_submit_override(doc, doc.doctype)
 
@@ -75,7 +94,6 @@ def generic_invoice_on_submit_override(doc: Document, invoice_type: str):
         obr_api.payload = payload
         obr_api.service = "AddCreditNote" if doc.is_return else "AddInvoice"
         obr_api.success_callback_handler = handle_sales_invoice_submission
-        # obr_api.error_callback_handler = handler
 
         frappe.enqueue(
             obr_api.make_remote_request,
@@ -104,30 +122,47 @@ def on_cancel(doc: Document, method: str | None = None) -> None:
     posting_date, start_date = doc.posting_date, settings_doc.start_date
 
     if isinstance(posting_date, str):
-        posting_date = datetime.datetime.strptime(doc.posting_date, "%Y-%m-%d").date()
+        posting_date = datetime.strptime(doc.posting_date, "%Y-%m-%d").date()
 
     if isinstance(start_date, str):
-        start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
     if posting_date < start_date:
         return
 
-    if not doc.custom_submitted_to_obr:
-        return
-
-    if not doc.custom_reason_for_creditcancel:
-        frappe.throw(
-            _(
-                "Please provide a reason for invoice cancellation before cancelling the invoice."
+    if doc.doctype == "Sales Invoice":
+        # Get data from OBR Invoice Submission for Sales Invoice
+        obr_submission = get_obr_submission(doc.name)
+        if not obr_submission:
+            return
+        if not obr_submission.submitted_to_obr:
+            return
+        if not obr_submission.reason_for_creditcancel:
+            frappe.throw(
+                _(
+                    "Please provide a reason for invoice cancellation before cancelling the invoice."
+                )
             )
-        )
+        soup = BeautifulSoup(obr_submission.reason_for_creditcancel, "html.parser")
+        ct_motif = soup.get_text()
+        invoice_identifier = obr_submission.invoice_identifier
+    else:
+        # POS Invoice — use custom fields as before
+        if not doc.custom_submitted_to_obr:
+            return
+        if not doc.custom_reason_for_creditcancel:
+            frappe.throw(
+                _(
+                    "Please provide a reason for invoice cancellation before cancelling the invoice."
+                )
+            )
+        soup = BeautifulSoup(doc.custom_reason_for_creditcancel, "html.parser")
+        ct_motif = soup.get_text()
+        invoice_identifier = doc.custom_invoice_identifier
 
-    soup = BeautifulSoup(doc.custom_reason_for_creditcancel, "html.parser")
-    ct_motif = soup.get_text()
-
-    invoice_identifier = doc.custom_invoice_identifier
     if not invoice_identifier:
         return
+
     invoice_data = {
         "invoice_signature": f"{invoice_identifier}",
         "cn_motif": ct_motif,
@@ -148,7 +183,6 @@ def on_cancel(doc: Document, method: str | None = None) -> None:
         obr_api.payload = payload
         obr_api.service = "CancelInvoice"
         obr_api.success_callback_handler = handle_sales_invoice_cancellation
-        # obr_api.error_callback_handler = handler
 
         frappe.enqueue(
             obr_api.make_remote_request,
