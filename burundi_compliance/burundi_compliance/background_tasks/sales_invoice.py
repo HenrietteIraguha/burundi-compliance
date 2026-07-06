@@ -72,9 +72,6 @@ def send_pending_invoices(invoice_list: list, doctype: str) -> None:
 				if doc.custom_defer_submission_to_obr:
 					continue
 
-				if doc.doctype == "Sales Invoice" and doc.is_consolidated:
-					continue
-
 				if doc.custom_submitted_to_obr:
 					continue
 
@@ -98,7 +95,6 @@ def send_pending_invoices(invoice_list: list, doctype: str) -> None:
 					obr_api.payload = payload
 					obr_api.service = "AddCreditNote" if doc.is_return else "AddInvoice"
 					obr_api.success_callback_handler = handle_sales_invoice_submission
-					# obr_api.error_callback_handler = handler
 
 					frappe.enqueue(
 						obr_api.make_remote_request,
@@ -106,7 +102,7 @@ def send_pending_invoices(invoice_list: list, doctype: str) -> None:
 						queue="default",
 						timeout=600,
 						job_name=f"obr_invoice_submission_{doc.name}",
-						doctype="Sales Invoice",
+						doctype=doctype,
 						document_name=doc.name,
 					)
 			except Exception as e:
@@ -147,7 +143,7 @@ def send_pending_cancelled_invoices(invoice_list: list, doctype: str) -> None:
 			try:
 				doc = frappe.get_doc(doctype, invoice.name, for_update=False)
 
-				if doc.custom_submitted_to_obr:
+				if not doc.custom_submitted_to_obr:
 					continue
 
 				posting_date = doc.posting_date
@@ -159,7 +155,7 @@ def send_pending_cancelled_invoices(invoice_list: list, doctype: str) -> None:
 
 				if not doc.custom_reason_for_creditcancel:
 					frappe.log_error(
-						message=f"Sales Invoice {doc.name} is missing reason for cancellation/credit note. Skipping OBR submission.",
+						message=f"{doctype} {doc.name} is missing reason for cancellation/credit note. Skipping OBR submission.",
 						title="OBR Invoice Cancellation Error",
 					)
 					continue
@@ -188,7 +184,6 @@ def send_pending_cancelled_invoices(invoice_list: list, doctype: str) -> None:
 					obr_api.payload = payload
 					obr_api.service = "CancelInvoice"
 					obr_api.success_callback_handler = handle_sales_invoice_cancellation
-					# obr_api.error_callback_handler = handler
 
 					frappe.enqueue(
 						obr_api.make_remote_request,
