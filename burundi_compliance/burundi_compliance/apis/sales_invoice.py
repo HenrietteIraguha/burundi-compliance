@@ -50,8 +50,6 @@ def get_invoice_from_obr(name: str, invoice_type: str):
     environment = "sandbox" if settings_doc.sandbox else "production"
     headers = build_headers(company_name)
 
-    # Get invoice_identifier from OBR Invoice Submission for Sales Invoice
-    # or from custom field for POS Invoice
     if invoice_type == "Sales Invoice":
         obr_submission = frappe.db.get_value(
             "OBR Invoice Submission",
@@ -81,8 +79,18 @@ def get_invoice_from_obr(name: str, invoice_type: str):
 
 @frappe.whitelist()
 def resubmit_invoice_to_obr(name: str, invoice_type: str):
-    doc = frappe.get_doc(invoice_type, name)
     from ..overrides.sales_invoice import on_submit_invoice
+
+    if invoice_type == "Sales Invoice":
+        obr_name = frappe.db.exists(
+            "OBR Invoice Submission", {"sales_invoice": name}
+        )
+        if obr_name:
+            doc = frappe.get_doc("OBR Invoice Submission", obr_name)
+        else:
+            frappe.throw("No OBR Invoice Submission found for this Sales Invoice")
+    else:
+        doc = frappe.get_doc(invoice_type, name)
 
     on_submit_invoice(doc, method=None)
 
@@ -95,17 +103,23 @@ def bulk_submit_invoices_to_obr(doctype: str, invoice_list: str) -> None:
         try:
             from ..overrides.sales_invoice import on_submit_invoice
 
-            doc = frappe.get_doc(doctype, invoice)
-
             if doctype == "Sales Invoice":
-                # Check OBR Invoice Submission instead of custom field
                 already_submitted = frappe.db.exists(
                     "OBR Invoice Submission",
                     {"sales_invoice": invoice, "submitted_to_obr": 1}
                 )
-                if already_submitted or doc.docstatus != 1:
+                if already_submitted:
+                    continue
+                obr_name = frappe.db.exists(
+                    "OBR Invoice Submission", {"sales_invoice": invoice}
+                )
+                if not obr_name:
+                    continue
+                doc = frappe.get_doc("OBR Invoice Submission", obr_name)
+                if doc.docstatus != 1:
                     continue
             else:
+                doc = frappe.get_doc(doctype, invoice)
                 if doc.custom_submitted_to_obr or doc.docstatus != 1:
                     continue
 
@@ -120,7 +134,17 @@ def bulk_submit_invoices_to_obr(doctype: str, invoice_list: str) -> None:
 
 @frappe.whitelist()
 def cancel_invoice_in_obr(name: str, invoice_type: str):
-    doc = frappe.get_doc(invoice_type, name)
     from ..overrides.sales_invoice import on_cancel
+
+    if invoice_type == "Sales Invoice":
+        obr_name = frappe.db.exists(
+            "OBR Invoice Submission", {"sales_invoice": name}
+        )
+        if obr_name:
+            doc = frappe.get_doc("OBR Invoice Submission", obr_name)
+        else:
+            frappe.throw("No OBR Invoice Submission found for this Sales Invoice")
+    else:
+        doc = frappe.get_doc(invoice_type, name)
 
     on_cancel(doc, method=None)
