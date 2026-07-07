@@ -1,3 +1,64 @@
+frappe.ui.form.on('OBR Invoice Submission', {
+  refresh: function (frm) {
+    if (frm.doc.docstatus == 1 || (frm.doc.docstatus == 2 && frm.doc.submitted_to_obr)) {
+      addOBRInvoiceButtons(frm)
+    }
+  },
+})
+
+function addOBRInvoiceButtons(frm) {
+  if (frm.doc.submitted_to_obr && frm.doc.docstatus == 1) {
+    frm.add_custom_button(
+      __('Get Invoice'),
+      function () {
+        callBackendFunction(
+          frm,
+          'apis.sales_invoice.get_invoice_from_obr',
+          'GET',
+          __('Getting Invoice...'),
+          'Sales Invoice'
+        )
+      },
+      __('eBIMS Actions')
+    )
+  }
+
+  if (!frm.doc.einvoice_signatures) {
+    frm.add_custom_button(
+      __('Re-Submit'),
+      function () {
+        callBackendFunction(
+          frm,
+          'apis.sales_invoice.resubmit_invoice_to_obr',
+          'POST',
+          __('Resubmitting Invoice...'),
+          'Sales Invoice'
+        )
+      },
+      __('eBIMS Actions')
+    )
+  }
+
+  if (
+    frm.doc.submitted_to_obr &&
+    frm.doc.docstatus == 2 &&
+    !frm.doc.ebms_invoice_cancelled
+  ) {
+    frm.add_custom_button(
+      __('Cancel Invoice in OBR'),
+      function () {
+        callBackendFunction(
+          frm,
+          'apis.sales_invoice.cancel_invoice_in_obr',
+          'POST',
+          __('Cancelling Invoice in OBR...'),
+          'Sales Invoice'
+        )
+      },
+      __('eBIMS Actions')
+    )
+  }
+}
 
 frappe.ui.form.on('POS Invoice', {
   onload: function (frm) {
@@ -71,7 +132,6 @@ function addInvoiceButtons(frm, invoiceType) {
   }
 }
 
-// TODO: Display correct Message when an Invoice is resubmitted
 function callBackendFunction(
   frm,
   method,
