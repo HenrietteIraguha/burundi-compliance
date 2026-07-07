@@ -1,3 +1,74 @@
+frappe.ui.form.on('Sales Invoice', {
+  refresh: function (frm) {
+    if (frm.doc.docstatus == 1 || frm.doc.docstatus == 2) {
+      // Silently fetch OBR Invoice Submission data
+      frappe.db.get_value(
+        'OBR Invoice Submission',
+        { 'sales_invoice': frm.doc.name },
+        ['submitted_to_obr', 'einvoice_signatures', 'ebms_invoice_cancelled']
+      ).then(r => {
+        if (r && r.message) {
+          addSalesInvoiceButtons(frm, r.message)
+        }
+      })
+    }
+  },
+})
+
+function addSalesInvoiceButtons(frm, obr) {
+  if (obr.submitted_to_obr && frm.doc.docstatus == 1) {
+    frm.add_custom_button(
+      __('Get Invoice'),
+      function () {
+        callBackendFunction(
+          frm,
+          'apis.sales_invoice.get_invoice_from_obr',
+          'GET',
+          __('Getting Invoice...'),
+          'Sales Invoice'
+        )
+      },
+      __('eBIMS Actions')
+    )
+  }
+
+  if (!obr.einvoice_signatures && frm.doc.docstatus == 1) {
+    frm.add_custom_button(
+      __('Re-Submit'),
+      function () {
+        callBackendFunction(
+          frm,
+          'apis.sales_invoice.resubmit_invoice_to_obr',
+          'POST',
+          __('Resubmitting Invoice...'),
+          'Sales Invoice'
+        )
+      },
+      __('eBIMS Actions')
+    )
+  }
+
+  if (
+    obr.submitted_to_obr &&
+    frm.doc.docstatus == 2 &&
+    !obr.ebms_invoice_cancelled
+  ) {
+    frm.add_custom_button(
+      __('Cancel Invoice in OBR'),
+      function () {
+        callBackendFunction(
+          frm,
+          'apis.sales_invoice.cancel_invoice_in_obr',
+          'POST',
+          __('Cancelling Invoice in OBR...'),
+          'Sales Invoice'
+        )
+      },
+      __('eBIMS Actions')
+    )
+  }
+}
+
 frappe.ui.form.on('OBR Invoice Submission', {
   refresh: function (frm) {
     if (frm.doc.docstatus == 1 || (frm.doc.docstatus == 2 && frm.doc.submitted_to_obr)) {
