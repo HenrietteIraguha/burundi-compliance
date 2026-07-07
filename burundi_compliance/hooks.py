@@ -191,8 +191,8 @@ scheduler_events = {
     "hourly": [
         "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_pos_invoices",
         "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_cancelled_pos_invoices",
-        "burundi_compliance.burundi_compliance.background_tasks.obr_invoice_submission.send_pending_obr_submissions",
-        "burundi_compliance.burundi_compliance.background_tasks.obr_invoice_submission.send_pending_cancelled_obr_submissions",
+        "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_obr_submissions",
+        "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_cancelled_obr_submissions",
     ],
 }
 ##################################################################################################################

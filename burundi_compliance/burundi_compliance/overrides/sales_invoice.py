@@ -17,6 +17,16 @@ from ..utils.utils import get_urls, in_configured_timeslot
 
 obr_api = OBRAPI()
 
+def create_obr_submission(doc: Document, method: str | None = None) -> None:
+    existing = frappe.db.exists(
+        "OBR Invoice Submission", {"sales_invoice": doc.name}
+    )
+    if not existing:
+        obr_doc = frappe.new_doc("OBR Invoice Submission")
+        obr_doc.sales_invoice = doc.name
+        obr_doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+
 
 def on_submit_invoice(doc: Document, method: str | None = None) -> None:
     if doc.doctype == "OBR Invoice Submission":
