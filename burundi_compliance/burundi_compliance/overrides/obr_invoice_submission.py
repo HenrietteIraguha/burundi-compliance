@@ -74,16 +74,6 @@ def on_submit(doc: Document, method: str | None = None) -> None:
         obr_api.service = "AddCreditNote" if sales_invoice.is_return else "AddInvoice"
         obr_api.success_callback_handler = handle_sales_invoice_submission
 
-        frappe.enqueue(
-            obr_api.make_remote_request,
-            is_async=True,
-            queue="default",
-            timeout=600,
-            job_name=f"obr_invoice_submission_{sales_invoice.name}",
-            doctype="Sales Invoice",
-            document_name=sales_invoice.name,
-        )
-
 
 def on_cancel(doc: Document, method: str | None = None) -> None:
     sales_invoice = frappe.get_doc("Sales Invoice", doc.sales_invoice)
@@ -136,6 +126,25 @@ def on_cancel(doc: Document, method: str | None = None) -> None:
         obr_api.payload = invoice_data
         obr_api.service = "CancelInvoice"
         obr_api.success_callback_handler = handle_sales_invoice_cancellation
+
+
+def before_save(doc: Document, method: str | None = None) -> None:
+    sales_invoice = frappe.get_doc("Sales Invoice", doc.sales_invoice)
+    if sales_invoice.is_return:
+        doc.einvoice_signatures = ""
+        doc.invoice_registered_no = ""
+        doc.invoice_registered_date = None
+        doc.submitted_to_obr = 0
+
+        frappe.enqueue(
+            obr_api.make_remote_request,
+            is_async=True,
+            queue="default",
+            timeout=600,
+            job_name=f"obr_invoice_submission_{sales_invoice.name}",
+            doctype="Sales Invoice",
+            document_name=sales_invoice.name,
+        )
 
         frappe.enqueue(
             obr_api.make_remote_request,
