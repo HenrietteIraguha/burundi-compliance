@@ -18,31 +18,25 @@ from ..utils.utils import get_urls, in_configured_timeslot
 obr_api = OBRAPI()
 
 
-def get_obr_submission(invoice_name: str):
-    """Get OBR Invoice Submission record for a Sales Invoice"""
-    existing = frappe.db.exists(
-        "OBR Invoice Submission", {"sales_invoice": invoice_name}
-    )
-    if existing:
-        return frappe.get_doc("OBR Invoice Submission", existing)
-    return None
-
-
 def on_submit_invoice(doc: Document, method: str | None = None) -> None:
-    if doc.is_opening == "Yes":
-        return
+    if doc.doctype == "OBR Invoice Submission":
+        # Get the linked Sales Invoice
+        sales_invoice = frappe.get_doc("Sales Invoice", doc.sales_invoice)
 
-    if doc.doctype == "Sales Invoice" and doc.is_consolidated:
-        return
+        if sales_invoice.is_opening == "Yes":
+            return
 
-    if doc.doctype == "Sales Invoice":
-        # Check OBR Invoice Submission for Sales Invoice
-        obr_submission = get_obr_submission(doc.name)
-        if obr_submission:
-            if obr_submission.defer_submission_to_obr:
-                return
-            if obr_submission.submitted_to_obr:
-                return
+        if sales_invoice.is_consolidated:
+            return
+
+        if doc.defer_submission_to_obr:
+            return
+
+        if doc.submitted_to_obr:
+            return
+
+        generic_invoice_on_submit_override(sales_invoice, "Sales Invoice")
+
     else:
         # POS Invoice — use custom fields as before
         if doc.custom_defer_submission_to_obr:
@@ -50,7 +44,7 @@ def on_submit_invoice(doc: Document, method: str | None = None) -> None:
         if doc.custom_submitted_to_obr:
             return
 
-    generic_invoice_on_submit_override(doc, doc.doctype)
+        generic_invoice_on_submit_override(doc, doc.doctype)
 
 
 def generic_invoice_on_submit_override(doc: Document, invoice_type: str):
@@ -107,7 +101,47 @@ def generic_invoice_on_submit_override(doc: Document, invoice_type: str):
 
 
 def on_cancel(doc: Document, method: str | None = None) -> None:
-    company_name = doc.company
+    if doc.doctype == "OBR Invoice Submission":
+        # Read directly from OBR Invoice Submission fields
+        if not doc.submitted_to_obr:
+            return
+
+        if not doc.reason_for_creditcancel:
+            frappe.throw(
+                _(
+                    "Please provide a reason for invoice cancellation before cancelling."
+                )
+            )
+
+        soup = BeautifulSoup(doc.reason_for_creditcancel, "html.parser")
+        ct_motif = soup.get_text()
+        invoice_identifier = doc.invoice_identifier
+        company_name = frappe.get_value("Sales Invoice", doc.sales_invoice, "company")
+        doctype = "Sales Invoice"
+        document_name = doc.sales_invoice
+
+    else:
+        # POS Invoice — use custom fields as before
+        if not doc.custom_submitted_to_obr:
+            return
+
+        if not doc.custom_reason_for_creditcancel:
+            frappe.throw(
+                _(
+                    "Please provide a reason for invoice cancellation before cancelling the invoice."
+                )
+            )
+
+        soup = BeautifulSoup(doc.custom_reason_for_creditcancel, "html.parser")
+        ct_motif = soup.get_text()
+        invoice_identifier = doc.custom_invoice_identifier
+        company_name = doc.company
+        doctype = doc.doctype
+        document_name = doc.name
+
+    if not invoice_identifier:
+        return
+
     if not frappe.db.exists(SETTINGS_DOCTYPE_NAME, company_name):
         return
 
@@ -117,50 +151,6 @@ def on_cancel(doc: Document, method: str | None = None) -> None:
         return
 
     if not in_configured_timeslot(settings_doc, "invoice"):
-        return
-
-    posting_date, start_date = doc.posting_date, settings_doc.start_date
-
-    if isinstance(posting_date, str):
-        posting_date = datetime.strptime(doc.posting_date, "%Y-%m-%d").date()
-
-    if isinstance(start_date, str):
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-
-    if posting_date < start_date:
-        return
-
-    if doc.doctype == "Sales Invoice":
-        # Get data from OBR Invoice Submission for Sales Invoice
-        obr_submission = get_obr_submission(doc.name)
-        if not obr_submission:
-            return
-        if not obr_submission.submitted_to_obr:
-            return
-        if not obr_submission.reason_for_creditcancel:
-            frappe.throw(
-                _(
-                    "Please provide a reason for invoice cancellation before cancelling the invoice."
-                )
-            )
-        soup = BeautifulSoup(obr_submission.reason_for_creditcancel, "html.parser")
-        ct_motif = soup.get_text()
-        invoice_identifier = obr_submission.invoice_identifier
-    else:
-        # POS Invoice — use custom fields as before
-        if not doc.custom_submitted_to_obr:
-            return
-        if not doc.custom_reason_for_creditcancel:
-            frappe.throw(
-                _(
-                    "Please provide a reason for invoice cancellation before cancelling the invoice."
-                )
-            )
-        soup = BeautifulSoup(doc.custom_reason_for_creditcancel, "html.parser")
-        ct_motif = soup.get_text()
-        invoice_identifier = doc.custom_invoice_identifier
-
-    if not invoice_identifier:
         return
 
     invoice_data = {
@@ -175,12 +165,11 @@ def on_cancel(doc: Document, method: str | None = None) -> None:
 
     if headers and server_url and request_url:
         url = f"{server_url}/{request_url}"
-        payload = invoice_data
 
         obr_api.headers = headers
         obr_api.url = url
         obr_api.method = "POST"
-        obr_api.payload = payload
+        obr_api.payload = invoice_data
         obr_api.service = "CancelInvoice"
         obr_api.success_callback_handler = handle_sales_invoice_cancellation
 
@@ -189,7 +178,19 @@ def on_cancel(doc: Document, method: str | None = None) -> None:
             is_async=True,
             queue="default",
             timeout=600,
-            job_name=f"obr_invoice_cancellation_{doc.name}",
-            doctype=doc.doctype,
-            document_name=doc.name,
+            job_name=f"obr_invoice_cancellation_{document_name}",
+            doctype=doctype,
+            document_name=document_name,
         )
+
+
+def before_save(doc: Document, method: str | None = None) -> None:
+    if doc.doctype == "OBR Invoice Submission":
+        if not doc.sales_invoice:
+            return
+        sales_invoice = frappe.get_doc("Sales Invoice", doc.sales_invoice)
+        if sales_invoice.is_return:
+            doc.einvoice_signatures = ""
+            doc.invoice_registered_no = ""
+            doc.invoice_registered_date = None
+            doc.submitted_to_obr = 0
