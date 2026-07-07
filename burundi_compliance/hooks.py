@@ -174,7 +174,19 @@ doc_events ={
 
 # Scheduled Tasks minor changes
 # ---------------
-
+scheduler_events = {
+    "cron": {
+        "*/5 * * * *": [
+            "burundi_compliance.burundi_compliance.background_tasks.stock_movement.send_stock_movement_to_obr"
+        ],
+    },
+    "hourly": [
+        "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_pos_invoices",
+        "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_cancelled_pos_invoices",
+        "burundi_compliance.burundi_compliance.background_tasks.obr_invoice_submission.send_pending_obr_submissions",
+        "burundi_compliance.burundi_compliance.background_tasks.obr_invoice_submission.send_pending_cancelled_obr_submissions",
+    ],
+}
 ##################################################################################################################
 ##############################Remember to change the cron job to the correct time#################################
 ##################################################################################################################
