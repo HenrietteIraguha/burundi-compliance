@@ -200,3 +200,40 @@ def send_pending_cancelled_invoices(invoice_list: list, doctype: str) -> None:
 					title="OBR Invoice Cancellation Error",
 				)
 				continue
+
+def send_pending_obr_submissions() -> None:
+	all_pending = frappe.get_all(
+		"OBR Invoice Submission",
+		{"docstatus": 1, "submitted_to_obr": 0},
+		["name"],
+	)
+	for submission in all_pending:
+		try:
+			doc = frappe.get_doc("OBR Invoice Submission", submission.name)
+			from ..overrides.sales_invoice import on_submit_invoice
+			on_submit_invoice(doc)
+		except Exception as e:
+			frappe.log_error(
+				message=f"Error processing OBR Submission {submission.name}: {str(e)}",
+				title="OBR Invoice Submission Error",
+			)
+			continue
+
+
+def send_pending_cancelled_obr_submissions() -> None:
+	all_cancelled = frappe.get_all(
+		"OBR Invoice Submission",
+		{"docstatus": 2, "submitted_to_obr": 1, "ebms_invoice_cancelled": 0},
+		["name"],
+	)
+	for submission in all_cancelled:
+		try:
+			doc = frappe.get_doc("OBR Invoice Submission", submission.name)
+			from ..overrides.sales_invoice import on_cancel
+			on_cancel(doc)
+		except Exception as e:
+			frappe.log_error(
+				message=f"Error processing OBR Submission cancellation {submission.name}: {str(e)}",
+				title="OBR Invoice Cancellation Error",
+			)
+			continue
