@@ -43,7 +43,8 @@ def build_invoice_payload(doc: Document, settings_doc: Document) -> dict:
             invoice_signature,
             update_modified=False,
         )
-        payment_type = get_payment_method(obr_submission.payment_type)
+        # Use standard ERPNext mode_of_payment field instead of custom field
+        payment_type = get_payment_method(doc.mode_of_payment)
     else:
         # POS Invoice — store on doc directly as before
         frappe.db.set_value(
@@ -184,11 +185,14 @@ def confirm_tin_verified(customer: str):
 
 
 def get_payment_method(payment_type: str) -> str:
-    if payment_type == "Bank":
+    if not payment_type:
+        return "4"
+    payment_type_lower = payment_type.lower()
+    if "bank" in payment_type_lower:
         return "2"
-    elif payment_type == "Cash":
+    elif "cash" in payment_type_lower:
         return "1"
-    elif payment_type == "Credit":
+    elif "credit" in payment_type_lower:
         return "3"
     else:
         return "4"

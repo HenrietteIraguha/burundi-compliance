@@ -29,4 +29,3 @@ class OBRInvoiceSubmission(Document):
                 frappe.throw(
                     "Sales Invoice must be submitted before creating an OBR Invoice Submission"
                 )
-
