@@ -38,8 +38,8 @@ app_include_js = ["burundi_compliance/public/js/taxes_and_totals.js"]
 
 doctype_js = {
 
-    "OBR Invoice Submission": "burundi_compliance/client_scripts/e_invoicing.js",
-        
+    "Sales Invoice": "burundi_compliance/client_scripts/e_invoicing.js",
+    "OBR Invoice Submission": "burundi_compliance/client_scripts/e_invoicing.js",   
     "POS Invoice": "burundi_compliance/client_scripts/e_invoicing.js",
     "Company": "burundi_compliance/client_scripts/check_tin.js",
     "Customer": "burundi_compliance/client_scripts/check_tin.js",
