@@ -149,7 +149,12 @@ extend_doctype_class = {
 # ---------------
 # Hook on document methods and events
 
-doc_events = {
+doc_events ={
+    "OBR Invoice Submission": {
+        "on_submit": "burundi_compliance.burundi_compliance.overrides.obr_invoice_submission.on_submit",
+        "before_cancel": "burundi_compliance.burundi_compliance.overrides.obr_invoice_submission.on_cancel"
+    
+    },
     
     "POS Invoice": {
         "on_submit": "burundi_compliance.burundi_compliance.overrides.sales_invoice.on_submit_invoice",  # NOTE: UPDATE THIS PART
