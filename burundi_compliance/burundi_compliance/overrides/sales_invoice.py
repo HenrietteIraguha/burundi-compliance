@@ -24,6 +24,7 @@ def create_obr_submission(doc: Document, method: str | None = None) -> None:
     if not existing:
         obr_doc = frappe.new_doc("OBR Invoice Submission")
         obr_doc.sales_invoice = doc.name
+        obr_doc.payment_type = doc.get("__payment_type") or "Others"
         obr_doc.insert(ignore_permissions=True)
         frappe.db.commit()
 
