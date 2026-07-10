@@ -1,7 +1,25 @@
 frappe.ui.form.on('Sales Invoice', {
+  before_submit: function(frm) {
+    return new Promise((resolve, reject) => {
+      frappe.prompt(
+        {
+          label: 'Payment Type',
+          fieldname: 'payment_type',
+          fieldtype: 'Select',
+          options: '\nCash\nBank\nCredit\nOthers',
+          reqd: 1
+        },
+        function(values) {
+          frm.doc.__payment_type = values.payment_type
+          resolve()
+        },
+        __('OBR Payment Information'),
+        __('Confirm')
+      )
+    })
+  },
   refresh: function (frm) {
     if (frm.doc.docstatus == 1 || frm.doc.docstatus == 2) {
-      // Silently fetch OBR Invoice Submission data
       frappe.db.get_value(
         'OBR Invoice Submission',
         { 'sales_invoice': frm.doc.name },
