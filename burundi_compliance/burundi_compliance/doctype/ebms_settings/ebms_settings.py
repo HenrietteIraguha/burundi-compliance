@@ -37,11 +37,11 @@ class eBMSSettings(Document):
 	def before_save(self):
 		old_doc = self.get_doc_before_save()
 		invoice_methods = [
-			"burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_cancelled_pos_invoices",
-			"burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_cancelled_sales_invoices",
-			"burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_pos_invoices",
-			"burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_sales_invoices",
-		]
+            "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_cancelled_pos_invoices",
+            "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_pos_invoices",
+            "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_obr_submissions",
+            "burundi_compliance.burundi_compliance.background_tasks.sales_invoice.send_pending_cancelled_obr_submissions",
+       ]
 
 		stock_movement_methods = [
 			"burundi_compliance.burundi_compliance.background_tasks.stock_movement.send_stock_movement_to_obr",
