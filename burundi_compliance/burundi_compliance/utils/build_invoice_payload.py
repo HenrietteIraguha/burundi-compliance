@@ -43,8 +43,7 @@ def build_invoice_payload(doc: Document, settings_doc: Document) -> dict:
             invoice_signature,
             update_modified=False,
         )
-        # Use standard ERPNext mode_of_payment field instead of custom field
-        payment_type = get_payment_method(doc.mode_of_payment)
+        payment_type = get_payment_method(obr_submission.payment_type)
     else:
         # POS Invoice — store on doc directly as before
         frappe.db.set_value(
@@ -54,13 +53,13 @@ def build_invoice_payload(doc: Document, settings_doc: Document) -> dict:
             invoice_signature,
             update_modified=False,
         )
-        payment_type = get_payment_method(doc.custom_payment_types)
-
+        payment_type = get_payment_method(obr_submission.payment_type)
+        
     confirm_tin_verified(doc.customer)
     if doc.doctype == "POS Invoice":
         exempt_from_sales_tax = 0
     else:
-        exempt_from_sales_tax = doc.exempt_from_sales_tax
+        exempt_from_sales_tax = doc.get("exempt_from_sales_tax") or 0
 
     invoice_data = {
         "invoice_number": doc.name,
