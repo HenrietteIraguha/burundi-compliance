@@ -30,9 +30,22 @@ def create_obr_submission(doc: Document, method: str | None = None) -> None:
         frappe.db.commit()
 
 
+def cancel_obr_submission(doc: Document, method: str | None = None) -> None:
+    existing = frappe.db.exists(
+        "OBR Invoice Submission", {"sales_invoice": doc.name}
+    )
+    if existing:
+        obr_doc = frappe.get_doc("OBR Invoice Submission", existing)
+        if obr_doc.docstatus == 1:
+            obr_doc.reason_for_creditcancel = doc.get("__reason_for_cancel") or "Cancelled"
+            obr_doc.save(ignore_permissions=True)
+            obr_doc.cancel()
+            frappe.db.commit()
+
+
 def on_submit_invoice(doc: Document, method: str | None = None) -> None:
     if doc.doctype == "OBR Invoice Submission":
-        # Get the linked Sales Invoice
+
         sales_invoice = frappe.get_doc("Sales Invoice", doc.sales_invoice)
 
         if sales_invoice.is_opening == "Yes":
@@ -50,7 +63,7 @@ def on_submit_invoice(doc: Document, method: str | None = None) -> None:
         generic_invoice_on_submit_override(sales_invoice, "Sales Invoice")
 
     else:
-        # POS Invoice — use custom fields as before
+        
         if doc.custom_defer_submission_to_obr:
             return
         if doc.custom_submitted_to_obr:

@@ -31,7 +31,30 @@ frappe.ui.form.on('Sales Invoice', {
       })
     }
   },
+  
+   before_cancel: function(frm) {
+    return new Promise((resolve, reject) => {
+      frappe.prompt(
+        {
+          label: 'Reason for Cancellation',
+          fieldname: 'reason_for_cancel',
+          fieldtype: 'Text Editor',
+          reqd: 1
+        },
+        function(values) {
+          frm.doc.__reason_for_cancel = values.reason_for_cancel
+          resolve()
+        },
+        __('Reason for Cancellation'),
+        __('Confirm')
+      )
+    })
+  },
+  refresh: function (frm) {
+    
+  },
 })
+
 
 function addSalesInvoiceButtons(frm, obr) {
   if (obr.submitted_to_obr && frm.doc.docstatus == 1) {

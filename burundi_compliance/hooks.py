@@ -156,6 +156,7 @@ extend_doctype_class = {
 doc_events = {
         "Sales Invoice": {
         "on_submit": "burundi_compliance.burundi_compliance.overrides.sales_invoice.create_obr_submission",
+        "on_cancel": "burundi_compliance.burundi_compliance.overrides.sales_invoice.cancel_obr_submission",
  },
 
     "OBR Invoice Submission": {
