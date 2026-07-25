@@ -242,7 +242,7 @@ scheduler_events = {
 
 # exempt linked doctypes from being automatically cancelled
 #
-# auto_cancel_exempted_doctypes = ["Auto Repeat"]
+auto_cancel_exempted_doctypes = ["OBR Invoice Submission"]
 
 # Ignore links to specified DocTypes when deleting documents
 # -----------------------------------------------------------
