@@ -39,6 +39,7 @@ def cancel_obr_submission(doc: Document, method: str | None = None) -> None:
         if obr_doc.docstatus == 1:
             obr_doc.reason_for_creditcancel = doc.get("__reason_for_cancel") or "Cancelled"
             obr_doc.save(ignore_permissions=True)
+            obr_doc.flags.ignore_links = True
             obr_doc.cancel()
             frappe.db.commit()
 
