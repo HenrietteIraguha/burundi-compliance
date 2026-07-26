@@ -1,36 +1,39 @@
 frappe.ui.form.on('Sales Invoice', {
   before_submit: function(frm) {
     return new Promise((resolve, reject) => {
-      frappe.prompt(
-        {
-          label: 'Payment Type',
-          fieldname: 'payment_type',
-          fieldtype: 'Select',
-          options: '\nCash\nBank\nCredit\nOthers',
-          reqd: 1
-        },
-        function(values) {
-          frm.doc.__payment_type = values.payment_type
-          resolve()
-        },
-        __('OBR Payment Information'),
-        __('Confirm')
-      )
-    })
-  },
-  refresh: function (frm) {
-    if (frm.doc.docstatus == 1 || frm.doc.docstatus == 2) {
-      frappe.db.get_value(
-        'OBR Invoice Submission',
-        { 'sales_invoice': frm.doc.name },
-        ['submitted_to_obr', 'einvoice_signatures', 'ebms_invoice_cancelled']
-      ).then(r => {
-        if (r && r.message) {
-          addSalesInvoiceButtons(frm, r.message)
+        let fields = [
+            {
+                label: 'Payment Type',
+                fieldname: 'payment_type',
+                fieldtype: 'Select',
+                options: '\nCash\nBank\nCredit\nOthers',
+                reqd: 1
+            }
+        ]
+
+        if (frm.doc.is_return) {
+            fields.push({
+                label: 'Reason for Credit Note',
+                fieldname: 'reason_for_credit',
+                fieldtype: 'Text Editor',
+                reqd: 1
+            })
         }
-      })
-    }
-  },
+
+        frappe.prompt(
+            fields,
+            function(values) {
+                frm.doc.__payment_type = values.payment_type
+                if (values.reason_for_credit) {
+                    frm.doc.__reason_for_credit = values.reason_for_credit
+                }
+                resolve()
+            },
+            __('OBR Invoice Information'),
+            __('Confirm')
+        )
+    })
+},
   
    before_cancel: function(frm) {
     return new Promise((resolve, reject) => {

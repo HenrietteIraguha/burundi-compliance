@@ -25,6 +25,8 @@ def create_obr_submission(doc: Document, method: str | None = None) -> None:
         obr_doc = frappe.new_doc("OBR Invoice Submission")
         obr_doc.sales_invoice = doc.name
         obr_doc.payment_type = doc.get("__payment_type") or "Others"
+        if doc.get("__reason_for_credit"):
+            obr_doc.reason_for_creditcancel = doc.get("__reason_for_credit")
         obr_doc.insert(ignore_permissions=True)
         obr_doc.submit()
         frappe.db.commit()
