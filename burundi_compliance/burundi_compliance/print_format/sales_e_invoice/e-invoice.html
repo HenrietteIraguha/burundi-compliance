@@ -215,8 +215,10 @@
                             <div>No address found for the company.</div>
                         {% endif %}</div>
 
-                    <!-- <p class="mb-1">Facture OBR n°: {{ doc.custom_invoice_registered_no }}</p> -->
-                    <div class="qrcode-image overflow-auto"><p>{{doc.custom_invoice_identifier}}</p></div>
+                    <!-- <p class="mb-1">Facture OBR n°: {{ doc.custom_invoice_registergited_no }}</p> -->
+                    {%- set obr_list = frappe.get_all("OBR Invoice Submission", filters={"sales_invoice": doc.name}, fields=["invoice_identifier", "invoice_registered_no", "einvoice_signatures", "submitted_to_obr"], limit=1) %}
+                    {%- set obr = obr_list[0] if obr_list else None %}
+                        <div class="qrcode-image overflow-auto"><p>{{ obr.invoice_identifier if obr else "Not submitted to OBR" }}</p></div>
 
                 </div>
 
