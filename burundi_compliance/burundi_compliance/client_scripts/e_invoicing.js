@@ -54,6 +54,17 @@ frappe.ui.form.on('Sales Invoice', {
     })
   },
   refresh: function (frm) {
+    if (frm.doc.docstatus == 1 || frm.doc.docstatus == 2) {
+      frappe.db.get_value(
+        'OBR Invoice Submission',
+        { 'sales_invoice': frm.doc.name },
+        ['submitted_to_obr', 'einvoice_signatures', 'ebms_invoice_cancelled']
+      ).then(r => {
+        if (r && r.message) {
+          addSalesInvoiceButtons(frm, r.message)
+        }
+      })
+    }
     
   },
 })
