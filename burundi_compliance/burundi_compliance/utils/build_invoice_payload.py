@@ -8,18 +8,16 @@ from .format_date_and_time import date_time_format
 
 
 def get_or_create_obr_submission(doc: Document) -> Document:
-    """Get or create OBR Invoice Submission record for a Sales Invoice"""
+    """Get OBR Invoice Submission record for a Sales Invoice"""
     existing = frappe.db.exists(
         "OBR Invoice Submission", {"sales_invoice": doc.name}
     )
     if existing:
         return frappe.get_doc("OBR Invoice Submission", existing)
     else:
-        obr_doc = frappe.new_doc("OBR Invoice Submission")
-        obr_doc.sales_invoice = doc.name
-        obr_doc.insert(ignore_permissions=True)
-        frappe.db.commit()
-        return obr_doc
+        frappe.throw(
+            f"No OBR Invoice Submission found for Sales Invoice {doc.name}. Please ensure the invoice was submitted correctly."
+        )
 
 
 def build_invoice_payload(doc: Document, settings_doc: Document) -> dict:
